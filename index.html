@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cyber Snake Academy</title>
+<style>
+  :root {
+    --bg: #0a0f14;
+    --panel: #10181f;
+    --border: #1f3a3a;
+    --accent: #39ff88;
+    --accent-dim: #1f8f52;
+    --text: #d6f5e3;
+    --muted: #6f9c8a;
+    --wrong: #ff4d5e;
+    --almost: #ffb347;
+    --right: #39ff88;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: radial-gradient(circle at 50% 0%, #0f1c1c 0%, #05080a 70%);
+    color: var(--text);
+    font-family: "Consolas", "Courier New", monospace;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 40px;
+    min-height: 100%;
+  }
+  h1 {
+    margin: 0 0 4px;
+    font-size: 1.8rem;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-shadow: 0 0 12px rgba(57, 255, 136, 0.5);
+  }
+  .subtitle {
+    margin: 0 0 20px;
+    color: var(--muted);
+    font-size: 0.9rem;
+    text-align: center;
+  }
+  .layout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    max-width: 560px;
+  }
+  .hud {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 480px;
+    font-size: 0.95rem;
+    color: var(--muted);
+    padding: 0 4px;
+  }
+  .hud b { color: var(--accent); }
+  .board-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    aspect-ratio: 1 / 1;
+  }
+  canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    background: #05100a;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 0 24px rgba(57, 255, 136, 0.08) inset;
+  }
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(5, 10, 12, 0.92);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+    gap: 16px;
+  }
+  .hidden { display: none !important; }
+  .btn {
+    background: var(--accent-dim);
+    color: #05100a;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 22px;
+    font-family: inherit;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: transform 0.1s ease, background 0.15s ease;
+  }
+  .btn:hover { background: var(--accent); transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn.secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent-dim);
+  }
+  .btn.secondary:hover { background: rgba(57,255,136,0.08); }
+
+  /* Quiz overlay */
+  #quiz-overlay { justify-content: flex-start; padding: 18px; overflow-y: auto; }
+  .quiz-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 4px;
+  }
+  .category-badge {
+    background: rgba(57,255,136,0.12);
+    color: var(--accent);
+    border: 1px solid var(--accent-dim);
+    border-radius: 20px;
+    padding: 3px 12px;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .progress {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .quiz-question {
+    font-size: 1.05rem;
+    line-height: 1.4;
+    margin: 6px 0 10px;
+    color: var(--text);
+  }
+  .choices {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+  .choice {
+    text-align: left;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-family: inherit;
+    font-size: 0.92rem;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .choice:hover:not(:disabled) {
+    border-color: var(--accent-dim);
+    background: rgba(57,255,136,0.06);
+  }
+  .choice:disabled { cursor: default; }
+  .choice.correct {
+    border-color: var(--right);
+    background: rgba(57,255,136,0.15);
+    color: var(--right);
+  }
+  .choice.wrong {
+    border-color: var(--wrong);
+    background: rgba(255,77,94,0.15);
+    color: var(--wrong);
+  }
+  .feedback {
+    min-height: 20px;
+    font-size: 0.9rem;
+    font-weight: bold;
+  }
+  .feedback.ok { color: var(--right); }
+  .feedback.ko { color: var(--wrong); }
+
+  .big-title { font-size: 1.6rem; color: var(--accent); margin: 0; }
+  .result-score { font-size: 2.4rem; font-weight: bold; margin: 4px 0; }
+  .result-msg { font-size: 1.1rem; margin-bottom: 6px; }
+  .validated { color: var(--right); text-shadow: 0 0 14px rgba(57,255,136,0.6); }
+  .not-validated { color: var(--almost); }
+
+  .controls-hint {
+    color: var(--muted);
+    font-size: 0.8rem;
+    text-align: center;
+    max-width: 480px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>🐍 CYBER SNAKE ACADEMY</h1>
+  <p class="subtitle">Mangez les briques, répondez aux questions, validez vos compétences en cybersécurité.</p>
+
+  <div class="layout">
+    <div class="hud">
+      <span>Score serpent : <b id="hud-length">3</b></span>
+      <span>Questions : <b id="hud-progress">0 / 10</b></span>
+      <span>Bonnes réponses : <b id="hud-correct">0</b></span>
+    </div>
+
+    <div class="board-wrap">
+      <canvas id="game" width="480" height="480"></canvas>
+
+      <!-- Start screen -->
+      <div id="start-overlay" class="overlay">
+        <p class="big-title">Prêt(e) à valider vos acquis ?</p>
+        <p>Dirigez le serpent avec les flèches (ou ZQSD / WASD).<br>
+           Chaque brique mangée déclenche une question de cybersécurité.<br>
+           10 questions tirées au hasard parmi IAM, GRC, SOC et Sécurité de l'IA.</p>
+        <button class="btn" id="start-btn">Démarrer la partie</button>
+      </div>
+
+      <!-- Quiz overlay -->
+      <div id="quiz-overlay" class="overlay hidden">
+        <div class="quiz-header">
+          <span class="category-badge" id="quiz-category">IAM</span>
+          <span class="progress" id="quiz-progress">Question 1 / 10</span>
+        </div>
+        <p class="quiz-question" id="quiz-question">...</p>
+        <div class="choices" id="quiz-choices"></div>
+        <p class="feedback" id="quiz-feedback"></p>
+        <button class="btn hidden" id="quiz-continue">Continuer</button>
+      </div>
+
+      <!-- Game over / finished overlay -->
+      <div id="end-overlay" class="overlay hidden">
+        <p class="big-title" id="end-title">Partie terminée</p>
+        <p class="result-score" id="end-score">0 / 0</p>
+        <p class="result-msg" id="end-msg"></p>
+        <button class="btn" id="restart-btn">Rejouer</button>
+      </div>
+    </div>
+
+    <p class="controls-hint">Flèches / ZQSD / WASD pour diriger le serpent. Espace pour mettre en pause.</p>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------------------------------------------------------------------
+  // Question bank: 30 questions across IAM, GRC, SOC, Sécurité de l'IA
+  // Each answer object: { text, level: 'wrong' | 'almost' | 'right' }
+  // ---------------------------------------------------------------------
+  const QUESTION_BANK = [
+    // ---- IAM ----
+    { category: "IAM", question: "Qu'est-ce que le principe du moindre privilège ?", answers: [
+      { text: "Donner tous les droits administrateur à chaque utilisateur pour simplifier la gestion.", level: "wrong" },
+      { text: "Donner aux utilisateurs les droits nécessaires à leur poste, révisés une fois par an.", level: "almost" },
+      { text: "Accorder à chaque utilisateur uniquement les droits strictement nécessaires à l'exécution de ses tâches, à un instant donné.", level: "right" }
+    ]},
+    { category: "IAM", question: "Qu'est-ce que l'authentification multifacteur (MFA) ?", answers: [
+      { text: "Utiliser un mot de passe très long et complexe.", level: "wrong" },
+      { text: "Utiliser un mot de passe accompagné d'une question secrète.", level: "almost" },
+      { text: "Combiner au moins deux facteurs indépendants, par exemple un mot de passe et un code envoyé sur le téléphone.", level: "right" }
+    ]},
+    { category: "IAM", question: "Qu'est-ce que le SSO (Single Sign-On) ?", answers: [
+      { text: "Se connecter séparément à chaque application avec le même mot de passe.", level: "wrong" },
+      { text: "Utiliser un gestionnaire de mots de passe qui remplit automatiquement les formulaires.", level: "almost" },
+      { text: "S'authentifier une seule fois pour accéder ensuite à plusieurs applications via un fournisseur d'identité centralisé.", level: "right" }
+    ]},
+    { category: "IAM", question: "Qu'est-ce qu'un compte à privilèges ?", answers: [
+      { text: "Un compte utilisé uniquement pour envoyer des emails.", level: "wrong" },
+      { text: "Un compte protégé par un mot de passe plus complexe que les autres.", level: "almost" },
+      { text: "Un compte disposant de droits élevés (administrateur, root) permettant d'agir sur des systèmes critiques.", level: "right" }
+    ]},
+    { category: "IAM", question: "Qu'est-ce que le RBAC (Role-Based Access Control) ?", answers: [
+      { text: "Attribuer les droits en fonction de l'ancienneté de l'employé.", level: "wrong" },
+      { text: "Attribuer les droits individuellement à chaque utilisateur selon ses demandes ponctuelles.", level: "almost" },
+      { text: "Attribuer les droits d'accès en fonction du rôle métier de l'utilisateur dans l'organisation.", level: "right" }
+    ]},
+    { category: "IAM", question: "Pourquoi désactiver rapidement le compte d'un employé qui quitte l'entreprise ?", answers: [
+      { text: "Ce n'est pas nécessaire si son mot de passe est suffisamment compliqué.", level: "wrong" },
+      { text: "Il suffit de changer le mot de passe du compte.", level: "almost" },
+      { text: "Pour éviter tout accès non autorisé résiduel aux systèmes et données de l'entreprise.", level: "right" }
+    ]},
+    { category: "IAM", question: "Qu'est-ce que la fédération d'identité ?", answers: [
+      { text: "Créer un compte unique partagé par plusieurs utilisateurs.", level: "wrong" },
+      { text: "Synchroniser manuellement les mots de passe entre plusieurs systèmes.", level: "almost" },
+      { text: "Permettre à un utilisateur d'utiliser une identité issue d'un domaine de confiance pour accéder à des ressources d'un autre domaine.", level: "right" }
+    ]},
+    { category: "IAM", question: "Qu'est-ce qu'une revue périodique des accès (access review) ?", answers: [
+      { text: "Une opération réalisée uniquement lors d'un audit externe.", level: "wrong" },
+      { text: "Une vérification effectuée une seule fois, à la création du compte.", level: "almost" },
+      { text: "Un contrôle régulier permettant de vérifier que les droits accordés restent justifiés et adaptés.", level: "right" }
+    ]},
+
+    // ---- GRC ----
+    { category: "GRC", question: "Que signifie l'acronyme GRC ?", answers: [
+      { text: "Gestion des Ressources Cloud.", level: "wrong" },
+      { text: "Gouvernance et Contrôle Réglementaire.", level: "almost" },
+      { text: "Gouvernance, Risque et Conformité.", level: "right" }
+    ]},
+    { category: "GRC", question: "Qu'est-ce qu'une analyse de risque ?", answers: [
+      { text: "Une liste des incidents de sécurité déjà survenus dans l'entreprise.", level: "wrong" },
+      { text: "Une estimation du budget annuel alloué à la sécurité.", level: "almost" },
+      { text: "Un processus d'identification, d'évaluation et de hiérarchisation des risques pesant sur l'organisation.", level: "right" }
+    ]},
+    { category: "GRC", question: "Qu'est-ce que le RGPD ?", answers: [
+      { text: "Une norme technique de chiffrement des données.", level: "wrong" },
+      { text: "Une certification de sécurité destinée aux entreprises françaises.", level: "almost" },
+      { text: "Un règlement européen encadrant la protection des données à caractère personnel.", level: "right" }
+    ]},
+    { category: "GRC", question: "Qu'est-ce qu'une politique de sécurité de l'information ?", answers: [
+      { text: "Un logiciel antivirus installé sur les postes de travail.", level: "wrong" },
+      { text: "Un document technique décrivant la configuration des pare-feux.", level: "almost" },
+      { text: "Un document formalisant les règles et principes de sécurité que l'organisation s'engage à appliquer.", level: "right" }
+    ]},
+    { category: "GRC", question: "Qu'est-ce que la norme ISO/IEC 27001 ?", answers: [
+      { text: "Une loi imposant le chiffrement des données de santé.", level: "wrong" },
+      { text: "Un simple guide de bonnes pratiques, sans caractère certifiable.", level: "almost" },
+      { text: "Une norme internationale définissant les exigences d'un système de management de la sécurité de l'information (SMSI).", level: "right" }
+    ]},
+    { category: "GRC", question: "Qu'est-ce qu'un plan de continuité d'activité (PCA) ?", answers: [
+      { text: "Un plan de communication destiné à gérer une crise médiatique.", level: "wrong" },
+      { text: "Une sauvegarde régulière des données critiques de l'entreprise.", level: "almost" },
+      { text: "Un ensemble de procédures visant à assurer la poursuite des activités essentielles en cas d'incident majeur.", level: "right" }
+    ]},
+    { category: "GRC", question: "Qu'est-ce que la conformité (compliance) en cybersécurité ?", answers: [
+      { text: "Le fait d'installer les derniers correctifs de sécurité disponibles.", level: "wrong" },
+      { text: "Le fait de suivre les recommandations internes émises par la DSI.", level: "almost" },
+      { text: "Le fait de respecter les lois, règlements et normes applicables à l'organisation.", level: "right" }
+    ]},
+
+    // ---- SOC ----
+    { category: "SOC", question: "Que signifie l'acronyme SOC ?", answers: [
+      { text: "Système d'Optimisation des Connexions.", level: "wrong" },
+      { text: "Service d'Observation Continue.", level: "almost" },
+      { text: "Security Operations Center, le centre opérationnel de sécurité.", level: "right" }
+    ]},
+    { category: "SOC", question: "Qu'est-ce qu'un SIEM ?", answers: [
+      { text: "Un pare-feu de nouvelle génération.", level: "wrong" },
+      { text: "Un antivirus centralisé déployé sur tout le parc informatique.", level: "almost" },
+      { text: "Un système qui collecte et corrèle les journaux (logs) pour détecter des incidents de sécurité.", level: "right" }
+    ]},
+    { category: "SOC", question: "Qu'est-ce qu'un IOC (Indicator of Compromise) ?", answers: [
+      { text: "Un rapport d'audit de sécurité annuel.", level: "wrong" },
+      { text: "Une vulnérabilité connue référencée dans une base publique.", level: "almost" },
+      { text: "Une trace technique (adresse IP, hash, domaine...) révélant une possible compromission d'un système.", level: "right" }
+    ]},
+    { category: "SOC", question: "Que fait généralement un analyste SOC de niveau 1 ?", answers: [
+      { text: "Il conçoit l'architecture réseau de l'entreprise.", level: "wrong" },
+      { text: "Il corrige lui-même le code vulnérable des applications.", level: "almost" },
+      { text: "Il surveille les alertes de sécurité et effectue un premier tri avant escalade.", level: "right" }
+    ]},
+    { category: "SOC", question: "Qu'est-ce qu'un faux positif dans un SOC ?", answers: [
+      { text: "Une attaque réelle qui n'a pas été détectée par les outils.", level: "wrong" },
+      { text: "Une alerte dupliquée envoyée deux fois par erreur technique.", level: "almost" },
+      { text: "Une alerte de sécurité déclenchée alors qu'aucune menace réelle n'est présente.", level: "right" }
+    ]},
+    { category: "SOC", question: "Qu'est-ce que le \"threat hunting\" ?", answers: [
+      { text: "L'installation automatique des correctifs de sécurité.", level: "wrong" },
+      { text: "L'analyse des seules alertes déjà remontées par le SIEM.", level: "almost" },
+      { text: "La recherche proactive de menaces non détectées par les outils de sécurité classiques.", level: "right" }
+    ]},
+    { category: "SOC", question: "Qu'est-ce qu'un plan de réponse à incident ?", answers: [
+      { text: "Un document listant les fournisseurs de sécurité de l'entreprise.", level: "wrong" },
+      { text: "Une checklist utilisée uniquement après une cyberattaque majeure médiatisée.", level: "almost" },
+      { text: "Une procédure définissant les étapes à suivre pour détecter, contenir et remédier à un incident de sécurité.", level: "right" }
+    ]},
+    { category: "SOC", question: "Qu'est-ce que la corrélation d'événements dans un SOC ?", answers: [
+      { text: "L'envoi d'un email d'alerte à chaque connexion utilisateur.", level: "wrong" },
+      { text: "Le tri manuel des journaux par un analyste en fin de journée.", level: "almost" },
+      { text: "Le rapprochement automatique de plusieurs événements pour identifier un comportement suspect global.", level: "right" }
+    ]},
+
+    // ---- Sécurité de l'IA ----
+    { category: "Sécurité IA", question: "Qu'est-ce qu'une attaque par \"prompt injection\" ?", answers: [
+      { text: "Une attaque visant à surcharger les serveurs qui hébergent un modèle d'IA.", level: "wrong" },
+      { text: "Une attaque consistant à voler les données d'entraînement du modèle.", level: "almost" },
+      { text: "Une technique consistant à manipuler les instructions données à un modèle d'IA pour lui faire ignorer ses consignes initiales.", level: "right" }
+    ]},
+    { category: "Sécurité IA", question: "Qu'est-ce que le \"data poisoning\" ?", answers: [
+      { text: "Le vol de données personnelles stockées dans une base de données.", level: "wrong" },
+      { text: "La suppression volontaire de données d'entraînement pour ralentir un modèle.", level: "almost" },
+      { text: "L'introduction volontaire de données corrompues dans un jeu d'entraînement pour altérer le comportement d'un modèle d'IA.", level: "right" }
+    ]},
+    { category: "Sécurité IA", question: "Qu'est-ce que le \"model inversion\" ?", answers: [
+      { text: "Le fait d'inverser l'ordre des couches d'un réseau de neurones.", level: "wrong" },
+      { text: "Le fait de réentraîner un modèle à l'envers pour gagner du temps de calcul.", level: "almost" },
+      { text: "Une technique permettant de reconstruire des données sensibles ayant servi à l'entraînement d'un modèle.", level: "right" }
+    ]},
+    { category: "Sécurité IA", question: "Qu'est-ce qu'un \"adversarial example\" ?", answers: [
+      { text: "Un jeu de données utilisé volontairement pour tester un concurrent.", level: "wrong" },
+      { text: "Une donnée mal étiquetée par erreur humaine dans le jeu d'entraînement.", level: "almost" },
+      { text: "Une entrée légèrement modifiée, souvent imperceptible, conçue pour tromper un modèle d'IA.", level: "right" }
+    ]},
+    { category: "Sécurité IA", question: "Pourquoi limiter les données sensibles envoyées à un assistant IA externe ?", answers: [
+      { text: "Cela n'a aucun impact : les échanges avec une IA sont toujours confidentiels par défaut.", level: "wrong" },
+      { text: "Cela ne fait que ralentir les temps de réponse du modèle.", level: "almost" },
+      { text: "Pour éviter que des données confidentielles ne soient exposées, mémorisées ou réutilisées en dehors du contrôle de l'organisation.", level: "right" }
+    ]},
+    { category: "Sécurité IA", question: "Qu'est-ce que le \"shadow AI\" en entreprise ?", answers: [
+      { text: "Un module d'IA intégré nativement et validé par la DSI.", level: "wrong" },
+      { text: "Une IA utilisée uniquement par l'équipe sécurité pour la détection de menaces.", level: "almost" },
+      { text: "L'usage d'outils d'IA non validés ni supervisés par l'organisation, échappant à sa gouvernance.", level: "right" }
+    ]},
+    { category: "Sécurité IA", question: "Qu'est-ce que le \"red teaming\" appliqué à l'IA ?", answers: [
+      { text: "Une compétition sportive interne organisée par l'équipe informatique.", level: "wrong" },
+      { text: "Une revue de code classique effectuée par une équipe externe.", level: "almost" },
+      { text: "Le fait de tester activement un modèle d'IA en simulant des attaques pour identifier ses failles avant son déploiement.", level: "right" }
+    ]}
+  ];
+
+  const QUESTIONS_PER_GAME = 10;
+  const PASS_THRESHOLD = 8; // strictly more than this to pass
+
+  // ---------------------------------------------------------------------
+  // Snake game setup
+  // ---------------------------------------------------------------------
+  const GRID_SIZE = 24;
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  let cell = canvas.width / GRID_SIZE;
+
+  const hudLength = document.getElementById("hud-length");
+  const hudProgress = document.getElementById("hud-progress");
+  const hudCorrect = document.getElementById("hud-correct");
+
+  const startOverlay = document.getElementById("start-overlay");
+  const startBtn = document.getElementById("start-btn");
+
+  const quizOverlay = document.getElementById("quiz-overlay");
+  const quizCategory = document.getElementById("quiz-category");
+  const quizProgress = document.getElementById("quiz-progress");
+  const quizQuestion = document.getElementById("quiz-question");
+  const quizChoices = document.getElementById("quiz-choices");
+  const quizFeedback = document.getElementById("quiz-feedback");
+  const quizContinue = document.getElementById("quiz-continue");
+
+  const endOverlay = document.getElementById("end-overlay");
+  const endTitle = document.getElementById("end-title");
+  const endScore = document.getElementById("end-score");
+  const endMsg = document.getElementById("end-msg");
+  const restartBtn = document.getElementById("restart-btn");
+
+  const STATE = { START: "start", PLAYING: "playing", PAUSED_QUIZ: "quiz", PAUSED_MANUAL: "manual", GAME_OVER: "over" };
+  let state = STATE.START;
+
+  let snake, dir, nextDir, food, tickMs, lastTick, rafId;
+  let sessionQuestions, questionIndex, correctCount;
+
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function pickSessionQuestions() {
+    return shuffle(QUESTION_BANK).slice(0, QUESTIONS_PER_GAME);
+  }
+
+  function resetGame() {
+    snake = [
+      { x: 10, y: 12 },
+      { x: 9, y: 12 },
+      { x: 8, y: 12 }
+    ];
+    dir = { x: 1, y: 0 };
+    nextDir = { x: 1, y: 0 };
+    tickMs = 140;
+    sessionQuestions = pickSessionQuestions();
+    questionIndex = 0;
+    correctCount = 0;
+    spawnFood();
+    updateHud();
+  }
+
+  function spawnFood() {
+    let pos;
+    do {
+      pos = {
+        x: Math.floor(Math.random() * GRID_SIZE),
+        y: Math.floor(Math.random() * GRID_SIZE)
+      };
+    } while (snake.some(s => s.x === pos.x && s.y === pos.y));
+    food = pos;
+  }
+
+  function updateHud() {
+    hudLength.textContent = snake.length;
+    hudProgress.textContent = `${questionIndex} / ${QUESTIONS_PER_GAME}`;
+    hudCorrect.textContent = correctCount;
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // grid background
+    ctx.fillStyle = "#05100a";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // food
+    ctx.fillStyle = "#ffb347";
+    ctx.shadowColor = "#ffb347";
+    ctx.shadowBlur = 10;
+    roundRect(food.x * cell + 2, food.y * cell + 2, cell - 4, cell - 4, 4);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // snake
+    snake.forEach((seg, i) => {
+      ctx.fillStyle = i === 0 ? "#39ff88" : "#1f8f52";
+      roundRect(seg.x * cell + 1, seg.y * cell + 1, cell - 2, cell - 2, 4);
+      ctx.fill();
+    });
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function step() {
+    dir = nextDir;
+    const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+    // wall collision
+    if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE) {
+      return gameOver();
+    }
+    // self collision
+    if (snake.some(s => s.x === head.x && s.y === head.y)) {
+      return gameOver();
+    }
+
+    snake.unshift(head);
+
+    if (head.x === food.x && head.y === food.y) {
+      updateHud();
+      openQuiz();
+      return; // pause: don't spawn food / continue loop until quiz resolved
+    } else {
+      snake.pop();
+    }
+
+    draw();
+  }
+
+  function loop(ts) {
+    if (state !== STATE.PLAYING) return;
+    if (!lastTick) lastTick = ts;
+    if (ts - lastTick >= tickMs) {
+      lastTick = ts;
+      step();
+    }
+    if (state === STATE.PLAYING) {
+      rafId = requestAnimationFrame(loop);
+    }
+  }
+
+  function startLoop() {
+    state = STATE.PLAYING;
+    lastTick = 0;
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function gameOver() {
+    state = STATE.GAME_OVER;
+    cancelAnimationFrame(rafId);
+    draw();
+    showEndScreen(false);
+  }
+
+  // ---------------------------------------------------------------------
+  // Quiz logic
+  // ---------------------------------------------------------------------
+  function openQuiz() {
+    state = STATE.PAUSED_QUIZ;
+    cancelAnimationFrame(rafId);
+
+    const q = sessionQuestions[questionIndex];
+    quizCategory.textContent = q.category;
+    quizProgress.textContent = `Question ${questionIndex + 1} / ${QUESTIONS_PER_GAME}`;
+    quizQuestion.textContent = q.question;
+
+    const shuffledAnswers = shuffle(q.answers);
+    quizChoices.innerHTML = "";
+    quizFeedback.textContent = "";
+    quizFeedback.className = "feedback";
+    quizContinue.classList.add("hidden");
+
+    shuffledAnswers.forEach(answer => {
+      const btn = document.createElement("button");
+      btn.className = "choice";
+      btn.textContent = answer.text;
+      btn.addEventListener("click", () => handleAnswer(btn, answer, shuffledAnswers));
+      quizChoices.appendChild(btn);
+    });
+
+    quizOverlay.classList.remove("hidden");
+  }
+
+  function handleAnswer(clickedBtn, answer, allAnswers) {
+    const buttons = Array.from(quizChoices.children);
+    buttons.forEach(b => (b.disabled = true));
+
+    const isCorrect = answer.level === "right";
+    if (isCorrect) {
+      clickedBtn.classList.add("correct");
+      quizFeedback.textContent = "✔ Bonne réponse !";
+      quizFeedback.className = "feedback ok";
+      correctCount++;
+    } else {
+      clickedBtn.classList.add("wrong");
+      quizFeedback.textContent = "✘ Ce n'est pas la bonne réponse.";
+      quizFeedback.className = "feedback ko";
+      // reveal the correct one
+      const correctText = allAnswers.find(a => a.level === "right").text;
+      buttons.forEach(b => {
+        if (b.textContent === correctText) b.classList.add("correct");
+      });
+    }
+
+    questionIndex++;
+    updateHud();
+    quizContinue.classList.remove("hidden");
+  }
+
+  quizContinue.addEventListener("click", () => {
+    quizOverlay.classList.add("hidden");
+
+    if (questionIndex >= QUESTIONS_PER_GAME) {
+      state = STATE.GAME_OVER;
+      showEndScreen(true);
+      return;
+    }
+
+    // resume: consume the food, spawn a new one, speed up slightly
+    spawnFood();
+    tickMs = Math.max(80, tickMs - 3);
+    draw();
+    startLoop();
+  });
+
+  // ---------------------------------------------------------------------
+  // Start / end screens
+  // ---------------------------------------------------------------------
+  function showEndScreen(completedAll) {
+    const total = questionIndex;
+    endScore.textContent = `${correctCount} / ${total}`;
+
+    if (completedAll && correctCount > PASS_THRESHOLD) {
+      endTitle.textContent = "Partie terminée";
+      endScore.className = "result-score validated";
+      endMsg.innerHTML = "🏆 <strong class=\"validated\">Compétences validées</strong>";
+    } else if (completedAll) {
+      endTitle.textContent = "Partie terminée";
+      endScore.className = "result-score not-validated";
+      endMsg.textContent = `Il fallait plus de ${PASS_THRESHOLD}/10 bonnes réponses pour valider vos compétences. Retentez votre chance !`;
+    } else {
+      endTitle.textContent = "💥 Le serpent s'est écrasé";
+      endScore.className = "result-score not-validated";
+      endMsg.textContent = `Partie interrompue après ${total} question(s). Répondez à ${QUESTIONS_PER_GAME} questions sans mourir pour valider vos compétences.`;
+    }
+
+    endOverlay.classList.remove("hidden");
+  }
+
+  startBtn.addEventListener("click", () => {
+    startOverlay.classList.add("hidden");
+    resetGame();
+    draw();
+    startLoop();
+  });
+
+  restartBtn.addEventListener("click", () => {
+    endOverlay.classList.add("hidden");
+    resetGame();
+    draw();
+    startLoop();
+  });
+
+  // ---------------------------------------------------------------------
+  // Controls
+  // ---------------------------------------------------------------------
+  const KEY_MAP = {
+    ArrowUp: { x: 0, y: -1 }, ArrowDown: { x: 0, y: 1 }, ArrowLeft: { x: -1, y: 0 }, ArrowRight: { x: 1, y: 0 },
+    w: { x: 0, y: -1 }, s: { x: 0, y: 1 }, a: { x: -1, y: 0 }, d: { x: 1, y: 0 },
+    z: { x: 0, y: -1 }, q: { x: -1, y: 0 }
+  };
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === " ") {
+      e.preventDefault();
+      if (state === STATE.PLAYING) {
+        state = STATE.PAUSED_MANUAL;
+        cancelAnimationFrame(rafId);
+      } else if (state === STATE.PAUSED_MANUAL) {
+        startLoop();
+      }
+      return;
+    }
+
+    const wanted = KEY_MAP[e.key] ?? KEY_MAP[e.key.toLowerCase()];
+    if (!wanted || state !== STATE.PLAYING) return;
+
+    // prevent reversing directly into the snake's own body
+    if (wanted.x === -dir.x && wanted.y === -dir.y) return;
+    nextDir = wanted;
+    e.preventDefault();
+  });
+
+  // initial paint
+  resetGame();
+  draw();
+})();
+</script>
+</body>
+</html>
